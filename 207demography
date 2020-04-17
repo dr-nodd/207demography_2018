@@ -1,0 +1,135 @@
+#!/usr/bin/python3
+
+import sys
+import argparse
+import csv
+from operator import add
+from math import sqrt
+
+def check_code(a):
+    value = str(a)
+    if len(value) != 3:
+        raise argparse.ArgumentTypeError("%r code must be composed of 3 characters"%(value,))
+    return value
+
+
+if len(sys.argv) > 1:
+    parser = argparse.ArgumentParser(description='207demography')
+    parser.add_argument('vars', nargs='+', type=check_code)
+
+
+try:
+    args = parser.parse_args()
+except:
+    exit(84)
+
+
+data = []
+country = []
+calc = []
+tmp_data1 = []
+tmp_data2 = []
+tmp_data3 = []
+
+
+def calc_sum(data):
+    res = sum(list(map(int, data)))
+    return res
+
+
+def calc_sum_xy(data1, data2):
+    res = (sum(list(map(int, [data1[i] * data2[i] for i in range(min(len(data1), len(data2)))] + max(data1, data1, key=len)[min(len(data), len(data2)):]))))
+    return res
+
+
+def calc_sum_square(data):
+    res = sum(list(map(int, [int(x)**2 for x in data])))
+    return res
+
+
+def calc_square_sum(data):
+    res = calc_sum(data)**2
+    return res
+
+
+def calc_linear_regression(data, date, fit):
+    a = (calc_sum(data) * calc_sum_square(date) - calc_sum(date) * calc_sum_xy(data, date)) / (len(date) * calc_sum_square(date) - calc_square_sum(date))
+    b = (len(date) * calc_sum_xy(data, date) - calc_sum(data) * calc_sum(date)) / (len(date) * calc_sum_square(date) - calc_square_sum(date))
+    if fit == 1:
+        calc.append(a / 1000000)
+        calc.append(b / 1000000)
+    if fit == 2:
+        calc.append(a)
+        calc.append(b * 1000000)
+
+
+def calc_rmsd1(data, date):
+    res = 0
+    i = 0
+    while i < len(date):
+        res += (((date[i] * calc[1]) + calc[0]) - data[i] / 1000000)**2
+        i += 1
+    res /= len(date)
+    return sqrt(res)
+
+
+def fit1(date, data):
+    calc_linear_regression(date, data, 1)
+    rmsd = calc_rmsd1(date, data)
+    tmp_data3.append(rmsd)
+    print("Fit1")
+    if calc[0] >= 0:
+        print("\tY = {:.2f} X + {:.2f}".format(calc[1], calc[0]))
+    else:
+        print("\tY = {:.2f} X - {:.2f}".format(calc[1], calc[0] * -1))
+    print("\tRoot-mean-square deviation: {:.2f}".format(rmsd))
+    print("\tPopulation in 2050: {:.2f}".format(2050 * calc[1] + calc[0]))
+    calc.clear()
+
+
+def calc_rmsd2(data, date):
+    res = 0
+    i = 0
+    while i < len(date):
+        res += (((date[i] - calc[0]) / calc[1]) - data[i] / 1000000)**2
+        i += 1
+    res /= len(date)
+    return sqrt(res)
+
+
+def fit2(date, data):
+    calc_linear_regression(data, date, 2)
+    rmsd = calc_rmsd2(date, data)
+    tmp_data3.append(rmsd)
+    print("Fit2")
+    if calc[0] >= 0:
+        print("\tX = {:.2f} Y + {:.2f}".format(calc[1], calc[0]))
+    else:
+        print("\tX = {:.2f} Y - {:.2f}".format(calc[1], calc[0] * -1))
+    print("\tRoot-mean-square deviation: {:.2f}".format(rmsd))
+    print("\tPopulation in 2050: {:.2f}".format((2050 - calc[0]) / calc[1]))
+    calc.clear()
+
+
+def fill_data(tmp_data1, tmp_data2):
+    for j in data:
+        for i in args.vars:
+            if i == j[1]:
+                country.append(j[0])
+                if len(tmp_data1) == 0:
+                    tmp_data1.extend(list(map(int, j[2:])))
+                    tmp_data2.extend(list(map(int, data[0][2:])))
+                else:
+                    tmp_data1 = list(map(add, tmp_data1, list(map(int, j[2:]))))
+    return tmp_data1
+
+
+with open("207demography_data.csv", newline='') as csvfile:
+    reader = csv.reader(csvfile, delimiter=';')
+    for row in reader:
+        data.append(row)
+tmp_data1 = fill_data(tmp_data1, tmp_data2)
+print("Country:", ', '.join(country))
+fit1(tmp_data1, tmp_data2)
+fit2(tmp_data1, tmp_data2)
+print("Correlation: {:.4f}".format((tmp_data3[0] / tmp_data3[1])))
